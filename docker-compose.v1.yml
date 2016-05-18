@@ -1,0 +1,56 @@
+web:
+  restart: always
+  image: portus
+  container_name: portus_web
+  command: puma -b tcp://0.0.0.0:3000 -w 3
+  environment:
+    - PORTUS_MACHINE_FQDN_VALUE=portus.bys-control.com.ar
+    - PORTUS_DB_HOST=db
+    - VIRTUAL_HOST=portus.bys-control.com.ar
+    - VIRTUAL_PORT=3000
+  volumes:
+    - .:/portus
+  ports:
+    - 3000:3000
+  links:
+    - db
+
+crono:
+  restart: always
+  image: portus
+  container_name: portus_crono
+  entrypoint: bin/crono
+  environment:
+    - PORTUS_MACHINE_FQDN=portus.bys-control.com.ar
+    - PORTUS_DB_HOST=db
+  volumes:
+    - .:/portus
+    - registry
+  links:
+    - db
+
+db:
+  restart: always
+  image: library/mariadb:10.0.23
+  environment:
+    - MYSQL_ROOT_PASSWORD=portus
+    - MYSQL_USER=portus
+    - MYSQL_DATABASE=portus
+    - MYSQL_PASSWORD=portus
+
+registry:
+  restart: always
+  image: library/registry:2.3.1
+  volumes:
+    - /srv/docker/registry:/var/lib/registry
+    - ./compose/registry/portus.crt:/etc/docker/registry/portus.crt:ro
+    - ./compose/registry/config.yml:/etc/docker/registry/config.yml:ro
+  environment:
+    - VIRTUAL_HOST=registry.bys-control.com.ar
+    - VIRTUAL_PORT=5000
+  ports:
+    - 5000:5000
+    - 5001:5001 # required to access debug service
+  external_links:
+    - portus_web:portus
+
