@@ -2,6 +2,7 @@ class Auth::RegistrationsController < Devise::RegistrationsController
   layout "authentication", except: :edit
 
   include CheckLDAP
+  include SessionFlash
 
   before_action :check_signup, only: [:new, :create]
   before_action :check_admin, only: [:new, :create]
@@ -20,9 +21,9 @@ class Auth::RegistrationsController < Devise::RegistrationsController
 
     resource.save
     if resource.persisted?
-      set_flash_message :notice, :signed_up
+      session_flash(resource, :signed_up)
       sign_up(resource_name, resource)
-      respond_with resource, location: after_sign_up_path_for(resource)
+      respond_with resource, location: after_sign_up_path_for(resource), float: true
     else
       redirect_to new_user_registration_path,
         alert: resource.errors.full_messages
@@ -41,15 +42,15 @@ class Auth::RegistrationsController < Devise::RegistrationsController
       sign_in(current_user, bypass: true) if succ
       succ
     else
-      current_user.update_without_password(params.require(:user).permit(:email))
+      current_user.update_without_password(params.require(:user).permit(:email, :display_name))
     end
 
     if success
       redirect_to edit_user_registration_path,
-        notice: "Profile updated successfully!"
+        notice: "Profile updated successfully!", float: true
     else
       redirect_to edit_user_registration_path,
-        alert: resource.errors.full_messages
+        alert: resource.errors.full_messages, float: true
     end
   end
 
