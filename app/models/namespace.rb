@@ -49,6 +49,13 @@ class Namespace < ActiveRecord::Base
             length:     { maximum: MAX_NAME_LENGTH },
             namespace:  true
 
+  scope :not_portus, -> { where.not name: "portus" }
+
+  # Returns true if this namespace belongs to the internal user "portus".
+  def portus?
+    name == "portus"
+  end
+
   # global_namespace_cannot_be_private adds an error and returns false if the
   # visibility of the global namespace is set to private. Otherwise, it returns
   # true. This function is used to validate the visibility.
@@ -59,6 +66,7 @@ class Namespace < ActiveRecord::Base
     end
     true
   end
+
   # From the given repository name that can be prefix by the name of the
   # namespace, returns two values:
   #   1. The namespace where the given repository belongs to.
@@ -67,16 +75,16 @@ class Namespace < ActiveRecord::Base
   def self.get_from_name(name, registry = nil)
     if name.include?("/")
       namespace, name = name.split("/", 2)
-      if registry.nil?
-        namespace = Namespace.find_by(name: namespace)
+      namespace = if registry.nil?
+        Namespace.find_by(name: namespace)
       else
-        namespace = registry.namespaces.find_by(name: namespace)
+        registry.namespaces.find_by(name: namespace)
       end
     else
-      if registry.nil?
-        namespace = Namespace.find_by(global: true)
+      namespace = if registry.nil?
+        Namespace.find_by(global: true)
       else
-        namespace = Namespace.find_by(registry: registry, global: true)
+        Namespace.find_by(registry: registry, global: true)
       end
     end
     [namespace, name, registry]
@@ -88,7 +96,12 @@ class Namespace < ActiveRecord::Base
   def self.make_valid(name)
     return name if name =~ NAME_REGEXP
 
-    # First of all we strip extra characters from the beginning and end.
+    # One common case is LDAP and case sensitivity. With this in mind, try to
+    # downcase everything and see if now it's fine.
+    name = name.downcase
+    return name if name =~ NAME_REGEXP
+
+    # Let's strip extra characters from the beginning and end.
     first = name.index(/[a-z0-9]/)
     return nil if first.nil?
     last = name.rindex(/[a-z0-9]/)

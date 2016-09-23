@@ -48,8 +48,7 @@ class Webhook < ActiveRecord::Base
   # validator will fail.
   before_validation do
     unless url.nil? || url.blank?
-      self.url = "http://#{url}" unless url.start_with?("http://") ||
-          url.start_with?("https://")
+      self.url = "http://#{url}" unless url.start_with?("http://", "https://")
     end
   end
 
@@ -85,6 +84,12 @@ class Webhook < ActiveRecord::Base
     hydra.run
   end
 
+  # Handle a delete event from the registry. All enabled webhooks of the provided
+  # namespace are triggered in parallel.
+  def self.handle_delete_event(event)
+    handle_push_event(event)
+  end
+
   # host returns the host part of the URL. This is useful when wanting a pretty
   # representation of a webhook.
   def host
@@ -107,8 +112,6 @@ class Webhook < ActiveRecord::Base
     "#{username}:#{password}"
   end
 
-  private
-
   # create_request creates and returns a Request object with the provided arguments.
   def self.create_request(webhook, args, headers, event)
     request = Typhoeus::Request.new(webhook.url, args)
@@ -127,11 +130,16 @@ class Webhook < ActiveRecord::Base
         request_header:  headers.to_s,
         request_body:    JSON.generate(event),
         response_header: response.response_headers,
-        response_body:   response.response_body)
+        response_body:   response.response_body
+      )
     end
 
     request
   end
+
+  private_class_method :create_request
+
+  private
 
   # Provide useful parameters for the "timeline" when a webhook has been
   # removed.

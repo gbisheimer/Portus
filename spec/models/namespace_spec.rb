@@ -65,12 +65,31 @@ describe Namespace do
     end
   end
 
+  context "is portus" do
+    let!(:registry)    { create(:registry) }
+    let!(:owner)       { create(:user) }
+    let!(:portus)      { create(:admin, username: "portus") }
+
+    it "returns true when the given namespace belongs to portus" do
+      expect(Namespace.find_by(name: portus.username).portus?).to be_truthy
+      expect(Namespace.find_by(name: owner.username).portus?).to be_falsey
+    end
+
+    it "only returns the namespaces that are not portus" do
+      # The registry creates one extra user, so we have two personal
+      # namespace. Furthermore, there's the global one.
+      expect(Namespace.not_portus.count).to eq 3
+      expect(Namespace.count).to eq 4
+    end
+  end
+
   context "global namespace" do
     it "cannot be private" do
       namespace = create(
         :namespace,
         global:     true,
-        visibility: Namespace.visibilities[:visibility_public])
+        visibility: Namespace.visibilities[:visibility_public]
+      )
       namespace.visibility = Namespace.visibilities[:visibility_private]
       expect(namespace.save).to be false
 
@@ -97,7 +116,8 @@ describe Namespace do
           :namespace,
           global:     true,
           visibility: Namespace.visibilities[:visibility_public],
-          registry:   registry)
+          registry:   registry
+        )
         expect(global_namespace.clean_name).to eq(registry.hostname)
       end
     end
@@ -160,6 +180,10 @@ describe Namespace do
       expect(Namespace.make_valid("ma_s")).to eq "ma_s"
       expect(Namespace.make_valid("!lol!")).to eq "lol"
       expect(Namespace.make_valid("!lol!name")).to eq "lol_name"
+      expect(Namespace.make_valid("Miquel.Sabate")).to eq "miquel.sabate"
+      expect(Namespace.make_valid("Miquel.Sabate.")).to eq "miquel.sabate"
+      expect(Namespace.make_valid("M")).to eq "m"
+      expect(Namespace.make_valid("_M_")).to eq "m"
     end
   end
 end

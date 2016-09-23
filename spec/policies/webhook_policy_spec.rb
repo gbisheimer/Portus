@@ -18,7 +18,8 @@ describe WebhookPolicy do
       :namespace,
       description: "short test description.",
       registry:    @registry,
-      team:        team)
+      team:        team
+    )
   end
   let(:webhook) { create(:webhook, namespace: namespace) }
 
@@ -74,8 +75,10 @@ describe WebhookPolicy do
       expect(Pundit.policy_scope(viewer, Webhook).to_a).to match_array(expected)
     end
 
-    it "does not show webhooks to user" do
+    it "does show webhooks to user when appropiate" do
       expect(Pundit.policy_scope(user, Webhook).to_a).to be_empty
+      create(:webhook, namespace: user.namespace)
+      expect(Pundit.policy_scope(user, Webhook).to_a).to_not be_empty
     end
   end
 end

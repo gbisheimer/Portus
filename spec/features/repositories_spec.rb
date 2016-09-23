@@ -29,6 +29,17 @@ feature "Repositories support" do
       expect(page).to have_content("Pull Viewer")
     end
 
+    scenario "The delete feature is available only for allowed users", js: true do
+      APP_CONFIG["delete"] = { "enabled" => true }
+
+      visit repository_path(repository)
+      expect(page).to have_content("Delete image")
+
+      login_as user2, scope: :user
+      visit repository_path(repository)
+      expect(page).to_not have_content("Delete image")
+    end
+
     scenario "A user can star a repository", js: true do
       visit repository_path(repository)
       expect(find("#toggle_star")).to be_visible
@@ -58,7 +69,7 @@ feature "Repositories support" do
     scenario "Groupped tags are handled properly", js: true do
       ["", "", "same", "same", "another", "yet-another"].each_with_index do |digest, idx|
         create(:tag, name: "tag#{idx}", author: user, repository: repository, digest: digest,
-               image_id: "Image")
+               image_id: "Image", created_at: idx.hours.ago)
       end
 
       expectations = [["tag0"], ["tag1"], ["tag2", "tag3"], ["tag4"], ["tag5"]]

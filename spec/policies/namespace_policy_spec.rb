@@ -18,7 +18,8 @@ describe NamespacePolicy do
       :namespace,
       description: "short test description.",
       registry:    @registry,
-      team:        team)
+      team:        team
+    )
   end
 
   before :each do
@@ -212,6 +213,13 @@ describe NamespacePolicy do
       expected = team.namespaces
       expected.first.update_attributes(visibility: :visibility_public)
       expect(Pundit.policy_scope(viewer, Namespace).to_a).to match_array(expected)
+    end
+
+    it "shows protected namespaces" do
+      user = create(:user)
+      n = create(:namespace, visibility: :visibility_protected)
+      create(:team, namespaces: [n], owners: [owner])
+      expect(Pundit.policy_scope(user, Namespace)).to match_array([n])
     end
   end
 end

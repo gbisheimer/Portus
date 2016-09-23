@@ -13,7 +13,8 @@ class NamespacesController < ApplicationController
   # GET /namespaces.json
   def index
     @special_namespaces = Namespace.where(
-      "global = ? OR namespaces.name = ?", true, current_user.username)
+      "global = ? OR namespaces.name = ?", true, current_user.username
+    )
     @namespaces = policy_scope(Namespace).page(params[:page])
 
     respond_with(@namespaces)
@@ -22,6 +23,8 @@ class NamespacesController < ApplicationController
   # GET /namespaces/1
   # GET /namespaces/1.json
   def show
+    raise ActiveRecord::RecordNotFound if @namespace.portus?
+
     authorize @namespace
     @repositories = @namespace.repositories.page(params[:page])
 
